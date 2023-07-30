@@ -11,4 +11,5 @@ syncButton.addEventListener('click', () => {
 });
 
 loginButton.addEventListener('click', () => {
+  window.go_to_login();
 });

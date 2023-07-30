@@ -14,18 +14,22 @@ function createAuthWindow() {
         frame: false,
         alwaysOnTop: true,
         webPreferences: {
-            preload: path.join(__dirname, 'pages', 'auth_window', 'preload.js')
+            preload: path.join(__dirname, 'preload.js')
         }
     });
-    win.loadFile(path.join(__dirname, 'pages', 'auth_window', 'index.html'));
+    win.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
+
+    return win;
 }
 
+let current_window;
+
 app.whenReady().then(() => {
-    createAuthWindow();
+    current_window = createAuthWindow();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
-            createAuthWindow();
+            current_window = createAuthWindow();
         }
     });
 });
@@ -40,9 +44,21 @@ ipcMain.handle('close-window', () => {
   app.quit();
 });
 
-ipcMain.handle('sync-credentials', async (event) => {
+ipcMain.handle('go-to-login', () => {
+  current_window.loadFile(path.join(__dirname, 'pages', 'login', 'index.html'))
+});
+
+ipcMain.handle('back-to-login', () => {
+  current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'))
+});
+
+ipcMain.handle('verify-credentials', (_, credentials) => {
+  console.log(credentials);
+});
+
+ipcMain.handle('sync-credentials', async () => {
   try {
-    const url = 'https://raw.githubusercontent.com/chirumer/CodeIO/main/CodeArena/credentials.json';
+    const url = 'https://codeio.club/CodeArena/credentials.json';
 
     const response = await axios.get(url);
     const credentialsData = response.data;
