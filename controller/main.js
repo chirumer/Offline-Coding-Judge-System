@@ -48,10 +48,15 @@ ipcMain.handle('sync-credentials', async (event) => {
     const credentialsData = response.data;
 
     const appDataPath = app.getPath('userData');
+    const folderName = 'controller_data';
     const fileName = 'credentials.json';
-    const filePath = path.join(appDataPath, fileName);
+    const folderPath = path.join(appDataPath, folderName);
+    const filePath = path.join(folderPath, fileName);
 
-    console.log(filePath);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath);
+    }
+
     // Write the credentials data to the local file
     fs.writeFileSync(filePath, JSON.stringify(credentialsData, null, 2));
 
