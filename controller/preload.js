@@ -24,3 +24,6 @@ contextBridge.exposeInMainWorld('send_login', (credentials) => {
   ipcRenderer.invoke('verify-credentials', credentials);
 });
 
+contextBridge.exposeInMainWorld('go_to_test_selection', (credentials) => {
+  ipcRenderer.invoke('back-to-test-selection', credentials);
+});

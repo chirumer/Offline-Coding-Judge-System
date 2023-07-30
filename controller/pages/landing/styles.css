@@ -30,6 +30,15 @@ body {
   -webkit-app-region: no-drag; 
 }
 
+#back-btn {
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  width: 50px;
+  font-size: 10px;
+  padding: 2px 3px;
+}
+
 .container {
   flex: 1; /* Make the container take up all remaining space vertically */
   display: flex;

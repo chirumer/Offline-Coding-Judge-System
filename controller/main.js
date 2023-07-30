@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { createHash } = require('crypto');
+const { createHash, createHmac } = require('crypto');
 
 function getProgramFilesPath() {
   if (process.platform === 'win32') {
@@ -11,6 +11,12 @@ function getProgramFilesPath() {
   } else {
     return '/usr/local'; // Default path for Unix-based systems
   }
+}
+
+function generateHMAC(data, secret) {
+  const hmac = createHmac('sha256', secret);
+  hmac.update(data);
+  return hmac.digest('hex');
 }
 
 function createAuthWindow() {
@@ -33,7 +39,6 @@ function createAuthWindow() {
 }
 
 let current_window;
-
 app.whenReady().then(() => {
     current_window = createAuthWindow();
 
@@ -54,8 +59,10 @@ ipcMain.handle('close-window', () => {
   app.quit();
 });
 
+let encryption_code;
 ipcMain.handle('test-credentials', (_, test_credentials) => {
-  const { test_name, encryption_code } = test_credentials;
+  const { test_name } = test_credentials;
+  encryption_code = test_credentials.encryption_code;
 
   if (!test_name) {
     dialog.showMessageBox({ type: 'error', message: 'Test Does Not Exist.' });
@@ -98,8 +105,40 @@ ipcMain.handle('back-to-login', () => {
   current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'))
 });
 
+ipcMain.handle('back-to-test-selection', () => {
+  current_window.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'))
+});
+
+let registered_email;
 ipcMain.handle('verify-credentials', (_, credentials) => {
-  console.log(credentials);
+  const appDataPath = app.getPath('userData');
+  const folderName = 'controller_data';
+  const fileName = 'credentials.json';
+  const folderPath = path.join(appDataPath, folderName);
+  const filePath = path.join(folderPath, fileName);
+
+  console.log(filePath);
+  if (!fs.existsSync(filePath)) {
+    dialog.showMessageBox({ type: 'error', message: 'Credentials Not Synced' });
+    current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
+    return;
+  }
+
+  const jsonData = fs.readFileSync(filePath, 'utf-8');
+  const registered_credentials = JSON.parse(jsonData);
+
+  const reg_key = generateHMAC(credentials.email, encryption_code);
+  if (!(reg_key in registered_credentials)) {
+    dialog.showMessageBox({ type: 'error', message: 'This Email Is Not Registered.' });
+    return;
+  }
+  if (generateHMAC(credentials.accessCode, encryption_code) != registered_credentials[reg_key]) {
+    dialog.showMessageBox({ type: 'error', message: 'Wrong Access Code.' });
+    return;
+  }
+
+  registered_email = credentials.email;
+  current_windowwindow.close();
 });
 
 ipcMain.handle('sync-credentials', async () => {
