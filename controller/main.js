@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 function createAuthWindow() {
@@ -9,11 +9,10 @@ function createAuthWindow() {
         maximizable: false,
         minimizable: false,
         resizable: false,
-        closable: false,
         frame: false,
         alwaysOnTop: true,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.js')
+            preload: path.join(__dirname, 'pages', 'auth_window', 'preload.js')
         }
     });
     win.loadFile(path.join(__dirname, 'pages', 'auth_window', 'index.html'));
@@ -33,4 +32,8 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
     }
+});
+
+ipcMain.on('close-window', () => {
+  app.quit();
 });

@@ -2,9 +2,6 @@ body {
   -webkit-app-region: drag;
   -webkit-user-select: none;
 }
-button {
-  -webkit-app-region: no-drag;
-}
 html, body {
   margin: 0;
   padding: 0;
@@ -23,6 +20,14 @@ body {
   text-align: center;
   font-weight: 900;
   font-family: 'Montserrat', sans-serif;
+}
+
+.close-button {
+  position: absolute;
+  right: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-app-region: no-drag; 
 }
 
 .container {
@@ -70,6 +75,7 @@ body {
   vertical-align: middle;
   white-space: nowrap;
   width: 250px;
+  -webkit-app-region: no-drag;
 }
 
 .button-19:after {
