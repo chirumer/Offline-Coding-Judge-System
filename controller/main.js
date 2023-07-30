@@ -2,6 +2,16 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { createHash } = require('crypto');
+
+function getProgramFilesPath() {
+  if (process.platform === 'win32') {
+    const arch = process.arch === 'x64' ? 'ProgramFiles' : 'ProgramFiles(x86)';
+    return process.env[arch];
+  } else {
+    return '/usr/local'; // Default path for Unix-based systems
+  }
+}
 
 function createAuthWindow() {
     const win = new BrowserWindow({
@@ -17,7 +27,7 @@ function createAuthWindow() {
             preload: path.join(__dirname, 'preload.js')
         }
     });
-    win.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
+    win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
 
     return win;
 }
@@ -42,6 +52,42 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('close-window', () => {
   app.quit();
+});
+
+ipcMain.handle('test-credentials', (_, test_credentials) => {
+  const { test_name, encryption_code } = test_credentials;
+
+  if (!test_name) {
+    dialog.showMessageBox({ type: 'error', message: 'Test Does Not Exist.' });
+    return;
+  }
+
+  const FolderPath = path.join(getProgramFilesPath(), 'CodeIO_program_files', 'apps', 'CodeArena', 'tests', test_name);
+  fs.access(FolderPath, fs.constants.F_OK, (err) => {
+    
+    if (err) {
+      dialog.showMessageBox({ type: 'error', message: 'Test Does Not Exist.' });
+      return;
+
+    } else {
+      try {
+        const keyHashFilePath = path.join(FolderPath, 'key_hash.txt');
+        const data = fs.readFileSync(keyHashFilePath, 'utf8');
+    
+        const providedHash = createHash('sha256').update(encryption_code).digest('hex');
+    
+        if (providedHash === data.trim()) {
+          current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
+
+        } else {
+          dialog.showMessageBox({ type: 'error', message: 'Invalid encryption code.' });
+        }
+      } catch (readErr) {
+        dialog.showMessageBox({ type: 'error', message: 'Error reading key_hash.txt.' });
+        return;
+      }
+    }
+  });
 });
 
 ipcMain.handle('go-to-login', () => {

@@ -4,6 +4,10 @@ contextBridge.exposeInMainWorld('close_window', () => {
   ipcRenderer.invoke('close-window');
 });
 
+contextBridge.exposeInMainWorld('send_test_credentials', (credentials) => {
+  ipcRenderer.invoke('test-credentials', credentials);
+});
+
 contextBridge.exposeInMainWorld('sync_credentials', () => {
   ipcRenderer.invoke('sync-credentials');
 });
@@ -19,3 +23,4 @@ contextBridge.exposeInMainWorld('go_back', () => {
 contextBridge.exposeInMainWorld('send_login', (credentials) => {
   ipcRenderer.invoke('verify-credentials', credentials);
 });
+
