@@ -22,7 +22,7 @@ body {
   font-family: 'Montserrat', sans-serif;
 }
 
-.close-button {
+#close-button {
   position: absolute;
   right: 12px;
   font-size: 16px;

@@ -1,4 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const axios = require('axios');
+const fs = require('fs');
 const path = require('path');
 
 function createAuthWindow() {
@@ -34,6 +36,36 @@ app.on('window-all-closed', () => {
     }
 });
 
-ipcMain.on('close-window', () => {
+ipcMain.handle('close-window', () => {
   app.quit();
+});
+
+ipcMain.handle('sync-credentials', async (event) => {
+  try {
+    const url = 'https://raw.githubusercontent.com/chirumer/CodeIO/main/CodeArena/credentials.json';
+
+    const response = await axios.get(url);
+    const credentialsData = response.data;
+
+    const appDataPath = app.getPath('userData');
+    const fileName = 'credentials.json';
+    const filePath = path.join(appDataPath, fileName);
+
+    console.log(filePath);
+    // Write the credentials data to the local file
+    fs.writeFileSync(filePath, JSON.stringify(credentialsData, null, 2));
+
+    const successMessage = 'Credentials sync successful!';
+    dialog.showMessageBox({ type: 'info', message: successMessage });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error('Error fetching or saving credentials:', error.message);
+
+    const errorMessage = `Failed to sync credentials: ${error.message}`;
+    dialog.showMessageBox({ type: 'error', message: errorMessage });
+
+    return { success: false, error: error.message };
+  }
 });

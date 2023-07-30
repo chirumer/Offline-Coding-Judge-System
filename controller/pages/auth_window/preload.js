@@ -1,7 +1,9 @@
-// preload.js
 const { ipcRenderer, contextBridge } = require('electron');
 
-// Expose IPC function to the renderer process
 contextBridge.exposeInMainWorld('close_window', () => {
-  ipcRenderer.send('close-window');
+  ipcRenderer.invoke('close-window');
+});
+
+contextBridge.exposeInMainWorld('sync_credentials', () => {
+  ipcRenderer.invoke('sync-credentials');
 });
