@@ -1,0 +1,117 @@
+body {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  background-color: #E1F5FE;
+}
+
+.titlebar {
+  background-color: #1976D2;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  font-weight: 900;
+  font-family: 'Montserrat', sans-serif;
+}
+
+#close-button {
+  position: absolute;
+  right: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-app-region: no-drag; 
+}
+
+#back-btn {
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  width: 50px;
+  font-size: 10px;
+  padding: 2px 3px;
+}
+
+.container {
+  flex: 1; /* Make the container take up all remaining space vertically */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly; /* Evenly distribute buttons */
+  align-items: center;
+}
+
+
+
+
+
+
+
+
+/* CSS */
+.button-19 {
+  appearance: button;
+  background-color: #1899D6;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  box-sizing: border-box;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-block;
+  font-family: din-round,sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  line-height: 20px;
+  margin: 0;
+  outline: none;
+  overflow: visible;
+  padding: 13px 16px;
+  text-align: center;
+  text-transform: uppercase;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  transition: filter .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  vertical-align: middle;
+  white-space: nowrap;
+  width: 250px;
+  -webkit-app-region: no-drag;
+}
+
+.button-19:after {
+  background-clip: padding-box;
+  background-color: #1CB0F6;
+  border: solid transparent;
+  border-radius: 16px;
+  border-width: 0 0 4px;
+  bottom: -4px;
+  content: "";
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: -1;
+}
+
+.button-19:main,
+.button-19:focus {
+  user-select: auto;
+}
+
+.button-19:hover:not(:disabled) {
+  filter: brightness(1.1);
+  -webkit-filter: brightness(1.1);
+}
+
+.button-19:disabled {
+  cursor: auto;
+}

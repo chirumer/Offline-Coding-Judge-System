@@ -117,7 +117,6 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
   const folderPath = path.join(appDataPath, folderName);
   const filePath = path.join(folderPath, fileName);
 
-  console.log(filePath);
   if (!fs.existsSync(filePath)) {
     dialog.showMessageBox({ type: 'error', message: 'Credentials Not Synced' });
     current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
@@ -138,7 +137,11 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
   }
 
   registered_email = credentials.email;
-  current_windowwindow.close();
+  current_window.loadFile(path.join(__dirname, 'pages', 'start_test', 'index.html'))
+});
+
+ipcMain.handle('start-test', () => {
+  current_window.close();
 });
 
 ipcMain.handle('sync-credentials', async () => {
