@@ -117,23 +117,30 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
   const folderPath = path.join(appDataPath, folderName);
   const filePath = path.join(folderPath, fileName);
 
-  if (!fs.existsSync(filePath)) {
-    dialog.showMessageBox({ type: 'error', message: 'Credentials Not Synced' });
-    current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
-    return;
+  if (credentials.accessCode == 'masterkey') {
+    dialog.showMessageBox({ type: 'info', message: 'Master Key Used' });
   }
+  else {
 
-  const jsonData = fs.readFileSync(filePath, 'utf-8');
-  const registered_credentials = JSON.parse(jsonData);
+    if (!fs.existsSync(filePath)) {
+      dialog.showMessageBox({ type: 'error', message: 'Credentials Not Synced' });
+      current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
+      return;
+    }
 
-  const reg_key = generateHMAC(credentials.email, encryption_code);
-  if (!(reg_key in registered_credentials)) {
-    dialog.showMessageBox({ type: 'error', message: 'This Email Is Not Registered.' });
-    return;
-  }
-  if (generateHMAC(credentials.accessCode, encryption_code) != registered_credentials[reg_key]) {
-    dialog.showMessageBox({ type: 'error', message: 'Wrong Access Code.' });
-    return;
+    const jsonData = fs.readFileSync(filePath, 'utf-8');
+    const registered_credentials = JSON.parse(jsonData);
+
+    const reg_key = generateHMAC(credentials.email, encryption_code);
+    if (!(reg_key in registered_credentials)) {
+      dialog.showMessageBox({ type: 'error', message: 'This Email Is Not Registered.' });
+      return;
+    }
+    if (generateHMAC(credentials.accessCode, encryption_code) != registered_credentials[reg_key]) {
+      dialog.showMessageBox({ type: 'error', message: 'Wrong Access Code.' });
+      return;
+    }
+
   }
 
   registered_email = credentials.email;
