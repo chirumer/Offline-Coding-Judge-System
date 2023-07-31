@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, globalShortcut } = require('electron');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +33,17 @@ function createAuthWindow() {
             preload: path.join(__dirname, 'preload.js')
         }
     });
+
+    // Register the shortcut to center the window with "Ctrl + W"
+    globalShortcut.register('Ctrl+W', () => {
+      win.center();
+    });
+    
+    // When the window is closed, unregister the shortcut to avoid any potential memory leaks
+    win.on('closed', () => {
+        globalShortcut.unregister('Ctrl+W');
+    });
+
     win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
 
     return win;
