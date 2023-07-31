@@ -64,7 +64,8 @@ function createAuthWindow() {
         globalShortcut.unregister('Ctrl+W');
     });
 
-    win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
+    // win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
+    win.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
 
     return win;
 }

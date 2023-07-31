@@ -24,10 +24,14 @@ contextBridge.exposeInMainWorld('send_login', (credentials) => {
   ipcRenderer.invoke('verify-credentials', credentials);
 });
 
-contextBridge.exposeInMainWorld('go_to_test_selection', (credentials) => {
-  ipcRenderer.invoke('back-to-test-selection', credentials);
+contextBridge.exposeInMainWorld('go_to_test_selection', () => {
+  ipcRenderer.invoke('back-to-test-selection');
 });
 
-contextBridge.exposeInMainWorld('start_test', (credentials) => {
-  ipcRenderer.invoke('start-test', credentials);
+contextBridge.exposeInMainWorld('start_test', () => {
+  ipcRenderer.invoke('start-test');
+});
+
+contextBridge.exposeInMainWorld('end_test_early', () => {
+  ipcRenderer.invoke('end-test-early');
 });
