@@ -2,7 +2,8 @@ const { app, BrowserWindow, ipcMain, dialog, globalShortcut } = require('electro
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { createHash, createHmac } = require('crypto');
+const { createHash, createHmac, createDecipheriv, randomBytes } = require('crypto');
+const AdmZip = require('adm-zip');
 
 function getProgramFilesPath() {
   if (process.platform === 'win32') {
@@ -17,6 +18,25 @@ function generateHMAC(data, secret) {
   const hmac = createHmac('sha256', secret);
   hmac.update(data);
   return hmac.digest('hex');
+}
+
+function sha256Hash(input) {
+  return createHash('sha256').update(input).digest();
+}
+
+// Function to delete a directory recursively
+function deleteFolderRecursive(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    fs.readdirSync(dirPath).forEach((file) => {
+      const currentPath = path.join(dirPath, file);
+      if (fs.lstatSync(currentPath).isDirectory()) {
+        deleteFolderRecursive(currentPath);
+      } else {
+        fs.unlinkSync(currentPath);
+      }
+    });
+    fs.rmdirSync(dirPath);
+  }
 }
 
 function createAuthWindow() {
@@ -70,7 +90,7 @@ ipcMain.handle('close-window', () => {
   app.quit();
 });
 
-let encryption_code;
+let encryption_code, test_folder;
 ipcMain.handle('test-credentials', (_, test_credentials) => {
   const { test_name } = test_credentials;
   encryption_code = test_credentials.encryption_code;
@@ -95,6 +115,8 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
         const providedHash = createHash('sha256').update(encryption_code).digest('hex');
     
         if (providedHash === data.trim()) {
+
+          test_folder = test_name;
           current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
 
         } else {
@@ -159,7 +181,50 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
 });
 
 ipcMain.handle('start-test', () => {
-  current_window.close();
+  const appDataPath = app.getPath('userData');
+  const folderName = 'controller_data/active_test';
+  const folderPath = path.join(appDataPath, folderName);
+
+  if (fs.existsSync(folderPath)) {
+    // Delete the folder and create a new one
+    deleteFolderRecursive(folderPath);
+    fs.mkdirSync(folderPath);
+  } else {
+    // Create a new folder
+    fs.mkdirSync(folderPath, { recursive: true });
+  }
+
+  // Unencrypt the file
+  const encryptedFilePath = path.join('C:/Program Files/CodeIO_program_files/apps/CodeArena/tests', test_folder, 'encrypted_questions.zip')
+  const decryptedFilePath = path.join(folderPath, 'questions.zip');
+
+  const decryptionKey = encryption_code;
+  const key = sha256Hash(decryptionKey);
+
+  const readStream = fs.createReadStream(encryptedFilePath);
+  const writeStream = fs.createWriteStream(decryptedFilePath);
+  const decipher = createDecipheriv('aes-256-cbc', key, randomBytes(16));
+
+  readStream.pipe(decipher).pipe(writeStream);
+
+  writeStream.on('error', (error) => {
+    console.error('Error during decryption:', error);
+  });
+
+  writeStream.on('finish', () => {
+    // Uncompress the decrypted zip file
+    const zip = new AdmZip(decryptedFilePath);
+    const extractionPath = folderPath; // Extract to the same folder
+
+    try {
+      zip.extractAllTo(extractionPath, /*overwrite=*/ true);
+
+      // Delete the decrypted zip file
+      fs.unlinkSync(decryptedFilePath);
+    } catch (err) {
+      console.error('Error during unzipping:', err);
+    }
+  });
 });
 
 ipcMain.handle('sync-credentials', async () => {
