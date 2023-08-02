@@ -40,10 +40,18 @@ body {
 
 #end_test_btn {
   position: absolute;
-  left: 5px;
+  left: 8px;
   top: 6px;
   width: 120px;
 }
+
+#syntax_help_btn {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  width: 100px;
+}
+
 
 #login-btn {
   font-size: 14px;
@@ -65,7 +73,7 @@ body {
   position: absolute;
   left: 10px;
   bottom: 10px;
-  width: 200px;
+  width: 220px;
   font-size: medium;
   border-radius: 8px;
 }
@@ -153,16 +161,29 @@ body {
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  height: 200px; /* Adjust the height as needed */
+  font-weight: 700;
+  color: #333333;
+  font-family: 'Roboto', sans-serif;
+  top: 45px;
 }
 
 #timer {
   position: absolute;
-  top: 65px;
+  top: 80px;
   height: 30px;
   width: 220px;
-  color: #333333;
-  font-family: 'Roboto', sans-serif;
   font-weight: 900;
   font-size: larger;
+}
+
+#points_display {
+  position: absolute;
+  padding: 5px;
+  left: 70px;
+}
+
+#attempted_display {
+  position: absolute;
+  padding: 5px;
+  right: 70px;
 }

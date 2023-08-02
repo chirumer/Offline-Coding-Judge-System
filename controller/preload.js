@@ -35,3 +35,11 @@ contextBridge.exposeInMainWorld('start_test', () => {
 contextBridge.exposeInMainWorld('end_test_early', () => {
   ipcRenderer.invoke('end-test-early');
 });
+
+contextBridge.exposeInMainWorld('change_question', () => {
+  ipcRenderer.invoke('change-question');
+});
+
+contextBridge.exposeInMainWorld('run_code', () => {
+  ipcRenderer.invoke('run-code');
+});

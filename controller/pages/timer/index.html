@@ -11,9 +11,16 @@
     <div class="titlebar">
       <button id="end_test_btn" class="button-19" role="button">end test early</button>
       Code Arena
-      <span id="close-button">&#x2716;</span>
+      <button id="syntax_help_btn" class="button-19" role="button">Syntax Help</button>
+      <!-- <span id="close-button">&#x2716;</span> -->
     </div>
     <div class="container">
+      <div id="points_display" class="white-box">
+        Points:&nbsp <span id="points">500</span>
+      </div>
+      <div id="attempted_display" class="white-box">
+        Attempted:&nbsp <span id="attempted">1/5</span>
+      </div>
       <div class="white-box" id="timer">
         Time Left: 60:00
       </div>
@@ -21,7 +28,7 @@
         Run Code
       </button>
       <button id="change_question_btn" class="button-19" role="button">
-        Change Question
+        Question Selection
       </button>
     </div>
   </body>

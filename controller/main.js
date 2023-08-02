@@ -64,15 +64,47 @@ function createAuthWindow() {
         globalShortcut.unregister('Ctrl+W');
     });
 
-    // win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
-    win.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
+    win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
 
     return win;
 }
 
+function popupLanguageSelection() {
+  const win = new BrowserWindow({
+      center: true,
+      width: 400,
+      height: 440,
+      maximizable: false,
+      minimizable: false,
+      resizable: false,
+      frame: false,
+      alwaysOnTop: true,
+      closable: true,
+      webPreferences: {
+          preload: path.join(__dirname, 'preload.js')
+      }
+  });
+
+  // Register the shortcut to center the window with "Ctrl + W"
+  globalShortcut.register('Ctrl+W', () => {
+    win.center();
+  });
+  
+  // When the window is closed, unregister the shortcut to avoid any potential memory leaks
+  win.on('closed', () => {
+      globalShortcut.unregister('Ctrl+W');
+  });
+
+  win.loadFile(path.join(__dirname, 'pages', 'language_selection', 'index.html'));
+
+  return win;
+}
+
 let current_window;
+let secondary_window;
 app.whenReady().then(() => {
     current_window = createAuthWindow();
+    secondary_window = popupLanguageSelection();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -87,7 +119,13 @@ app.on('window-all-closed', () => {
     }
 });
 
-ipcMain.handle('close-window', () => {
+ipcMain.handle('close-window', (which_window) => {
+
+  if (which_window == 'secondary') {
+    secondary_window.close();
+    return;
+  }
+
   app.quit();
 });
 
@@ -222,6 +260,10 @@ ipcMain.handle('start-test', () => {
 
       // Delete the decrypted zip file
       fs.unlinkSync(decryptedFilePath);
+
+      current_window.setClosable(false);
+      current_window.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
+
     } catch (err) {
       console.error('Error during unzipping:', err);
     }
