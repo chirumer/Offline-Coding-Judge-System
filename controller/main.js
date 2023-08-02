@@ -1,8 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, globalShortcut } = require('electron');
 const axios = require('axios');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
-const { createHash, createHmac, createDecipheriv, randomBytes } = require('crypto');
+const crypto = require('crypto');
 const AdmZip = require('adm-zip');
 
 let current_window, secondary_window;
@@ -32,8 +32,11 @@ function generateHMAC(data, secret) {
   return hmac.digest('hex');
 }
 
-function sha256Hash(input) {
-  return createHash('sha256').update(input).digest();
+
+function hashPassphrase(passphrase) {
+  const hash = crypto.createHash('sha256');
+  hash.update(passphrase);
+  return hash.digest();
 }
 
 // Function to delete a directory recursively
@@ -236,45 +239,47 @@ ipcMain.handle('start-test', () => {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 
+
   // Unencrypt the file
   const encryptedFilePath = path.join(test_folder, 'encrypted_questions.zip')
   const decryptedFilePath = path.join(folderPath, 'questions.zip');
 
-  const decryptionKey = encryption_code;
-  const key = sha256Hash(decryptionKey);
+  // Read the encrypted ZIP data
+  const encryptedZipData = fs.readFileSync(encryptedFilePath);
 
-  const readStream = fs.createReadStream(encryptedFilePath);
-  const writeStream = fs.createWriteStream(decryptedFilePath);
-  const decipher = createDecipheriv('aes-256-cbc', key, randomBytes(16));
+  // Get the IV from the first 16 bytes
+  const iv = encryptedZipData.subarray(0, 16);
+  
+  // Get the encrypted content from the rest of the buffer
+  const encryptedContent = encryptedZipData.subarray(16);
 
-  readStream.pipe(decipher).pipe(writeStream);
+  const key = hashPassphrase(encryption_code);
+  
+  // Decrypt the ZIP data
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  const decryptedZipData = Buffer.concat([decipher.update(encryptedContent), decipher.final()]);
+  
+  fs.writeFileSync(decryptedFilePath, decryptedZipData);
 
-  writeStream.on('error', (error) => {
-    console.error('Error during decryption:', error);
-  });
+  const zip = new AdmZip(decryptedFilePath);
+  const extractionPath = path.join(folderPath, 'questions'); // Extract to the same folder
 
-  writeStream.on('finish', () => {
-    // Uncompress the decrypted zip file
-    const zip = new AdmZip(decryptedFilePath);
-    const extractionPath = folderPath; // Extract to the same folder
+  try {
+    zip.extractAllTo(extractionPath, /*overwrite=*/ true);
 
-    try {
-      zip.extractAllTo(extractionPath, /*overwrite=*/ true);
+    // Delete the decrypted zip file
+    fs.unlinkSync(decryptedFilePath);
 
-      // Delete the decrypted zip file
-      fs.unlinkSync(decryptedFilePath);
+    active_test_path = extractionPath;
 
-      active_test_path = extractionPath;
+    current_window.setClosable(false);
+    current_window.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
+    
+    secondary_window = popupSelection('question_selection');
 
-      current_window.setClosable(false);
-      current_window.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
-      
-      secondary_window = popupSelection('question_selection');
-
-    } catch (err) {
-      console.error('Error during unzipping:', err);
-    }
-  });
+  } catch (err) {
+    console.error('Error during unzipping:', err);
+  }
 });
 
 ipcMain.handle('sync-credentials', async () => {
