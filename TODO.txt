@@ -1,0 +1,4 @@
+Encrypted (using test key) dump the stats after every change; to AppData, for resistance to unexpected termination (like power failure)
+(If time permits): Instead of loading Sample.pdf, template, Question.pdf.. first load just Sample.pdf and then load the rest after "Load" is clicked in timer window
+Replace dialogue boxes with modal electron windows
+Periodically checl for ethernet connection, if present: lock the app, volunteer will unlock with test key

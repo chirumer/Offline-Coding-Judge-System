@@ -5,6 +5,18 @@ const path = require('path');
 const { createHash, createHmac, createDecipheriv, randomBytes } = require('crypto');
 const AdmZip = require('adm-zip');
 
+let current_window, secondary_window;
+let encryption_code, test_folder, active_test_path;
+let registered_email;
+
+function remove_this_later() {
+  current_window = createAuthWindow();
+  encryption_code = 'iocode1';
+  registered_email = 'test@gmail.com'
+  test_folder = path.join(getProgramFilesPath(), 'CodeIO_program_files', 'apps', 'CodeArena', 'tests', 'test1');
+  current_window.loadFile(path.join(__dirname, 'pages', 'start_test', 'index.html'));
+}
+
 function getProgramFilesPath() {
   if (process.platform === 'win32') {
     const arch = process.arch === 'x64' ? 'ProgramFiles' : 'ProgramFiles(x86)';
@@ -66,6 +78,7 @@ function createAuthWindow() {
     // When the window is closed, unregister the shortcut to avoid any potential memory leaks
     win.on('closed', () => {
         globalShortcut.unregister('Ctrl+W');
+        app.quit();
     });
 
     win.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'));
@@ -73,7 +86,7 @@ function createAuthWindow() {
     return win;
 }
 
-function popupSelection() {
+function popupSelection(folder) {
   const win = new BrowserWindow({
       center: true,
       width: 400,
@@ -89,16 +102,14 @@ function popupSelection() {
       }
   });
 
-  win.loadFile(path.join(__dirname, 'pages', 'question_selection', 'index.html'));
+  win.loadFile(path.join(__dirname, 'pages', folder, 'index.html'));
 
   return win;
 }
 
-let current_window;
-let secondary_window;
 app.whenReady().then(() => {
-    current_window = createAuthWindow();
-    secondary_window = popupSelection();
+    // current_window = createAuthWindow();
+    remove_this_later();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -123,7 +134,6 @@ ipcMain.handle('close-window', (which_window) => {
   app.quit();
 });
 
-let encryption_code, test_folder;
 ipcMain.handle('test-credentials', (_, test_credentials) => {
   const { test_name } = test_credentials;
   encryption_code = test_credentials.encryption_code;
@@ -149,7 +159,7 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
     
         if (providedHash === data.trim()) {
 
-          test_folder = test_name;
+          test_folder = FolderPath;
           current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
 
         } else {
@@ -175,7 +185,6 @@ ipcMain.handle('back-to-test-selection', () => {
   current_window.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'))
 });
 
-let registered_email;
 ipcMain.handle('verify-credentials', (_, credentials) => {
   const appDataPath = app.getPath('userData');
   const folderName = 'controller_data';
@@ -228,7 +237,7 @@ ipcMain.handle('start-test', () => {
   }
 
   // Unencrypt the file
-  const encryptedFilePath = path.join('C:/Program Files/CodeIO_program_files/apps/CodeArena/tests', test_folder, 'encrypted_questions.zip')
+  const encryptedFilePath = path.join(test_folder, 'encrypted_questions.zip')
   const decryptedFilePath = path.join(folderPath, 'questions.zip');
 
   const decryptionKey = encryption_code;
@@ -255,8 +264,12 @@ ipcMain.handle('start-test', () => {
       // Delete the decrypted zip file
       fs.unlinkSync(decryptedFilePath);
 
+      active_test_path = extractionPath;
+
       current_window.setClosable(false);
       current_window.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
+      
+      secondary_window = popupSelection('question_selection');
 
     } catch (err) {
       console.error('Error during unzipping:', err);
