@@ -73,7 +73,7 @@ function createAuthWindow() {
     return win;
 }
 
-function popupLanguageSelection() {
+function popupSelection() {
   const win = new BrowserWindow({
       center: true,
       width: 400,
@@ -89,7 +89,7 @@ function popupLanguageSelection() {
       }
   });
 
-  win.loadFile(path.join(__dirname, 'pages', 'language_selection', 'index.html'));
+  win.loadFile(path.join(__dirname, 'pages', 'question_selection', 'index.html'));
 
   return win;
 }
@@ -98,7 +98,7 @@ let current_window;
 let secondary_window;
 app.whenReady().then(() => {
     current_window = createAuthWindow();
-    secondary_window = popupLanguageSelection();
+    secondary_window = popupSelection();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
