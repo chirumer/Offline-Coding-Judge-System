@@ -56,6 +56,10 @@ function createAuthWindow() {
 
     // Register the shortcut to center the window with "Ctrl + W"
     globalShortcut.register('Ctrl+W', () => {
+      if (secondary_window) {
+        secondary_window.center();
+        return;
+      }
       win.center();
     });
     
@@ -83,16 +87,6 @@ function popupLanguageSelection() {
       webPreferences: {
           preload: path.join(__dirname, 'preload.js')
       }
-  });
-
-  // Register the shortcut to center the window with "Ctrl + W"
-  globalShortcut.register('Ctrl+W', () => {
-    win.center();
-  });
-  
-  // When the window is closed, unregister the shortcut to avoid any potential memory leaks
-  win.on('closed', () => {
-      globalShortcut.unregister('Ctrl+W');
   });
 
   win.loadFile(path.join(__dirname, 'pages', 'language_selection', 'index.html'));
