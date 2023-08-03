@@ -322,6 +322,16 @@ ipcMain.handle('select-question', (_, question_id) => {
 });
 
 ipcMain.handle('select-language', (_, language) => {
+  if (language == 'javascript') {
+    dialog.showMessageBoxSync(current_window, {
+      type: 'error',
+      title: 'Language Not Supported',
+      message: 'This language is not supported.',
+      buttons: ['OK'],
+    });
+    return;
+  }
+
   secondary_window.close();
   secondary_window = null;
   current_window_inactive = false;
@@ -668,6 +678,9 @@ ipcMain.handle('run-program', (_, submit_time) => {
   else if (language == 'python') {
     run_program = run_python_program;
   }
+  else {
+
+  }
 
   run_program(programPath, public_test_cases, (result) => {
     if (result.compiler_error) {
@@ -851,7 +864,7 @@ function run_python_program(programPath, testCases, callback) {
       });
 
       runProcess.stderr.on('data', () => {
-          // Handle runtime errors if necessary
+          // run time error
       });
 
       runProcess.on('close', (code) => {
@@ -886,26 +899,3 @@ function run_python_program(programPath, testCases, callback) {
       runProcess.stdin.end();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
