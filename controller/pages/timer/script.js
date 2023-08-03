@@ -50,7 +50,7 @@ window.timer_window.receive_activate((info) => {
   const btn = document.getElementById('run_code_btn');
 
   const run_handler = (() => {
-    window.run_program();
+    window.run_program(initial_seconds - seconds);
   });
 
   const load_handler = (() => {
@@ -98,10 +98,12 @@ window.timer_window.receive_activate((info) => {
 
 
 const timerElement = document.getElementById("timer");
+let seconds, initial_seconds;
 
 // Function to start the countdown timer
 function startTimer(initialSeconds) {
-  let seconds = initialSeconds;
+  seconds = initialSeconds;
+  initial_seconds = initialSeconds;
 
   // Function to update the timer display
   function updateTimer() {
@@ -142,12 +144,13 @@ change_question_btn.addEventListener('click', () => {
 let totalPointsPossible;
 let numQuestions;
 let totalAttempted = 0;
+let totalPointsEarned
 
 window.get_questions_info().then((info) => {
   const { questions_info } = info;
 
   // Calculate total points earned and total possible points
-  let totalPointsEarned = 0;
+  totalPointsEarned = 0;
   totalAttempted = 0;
   totalPointsPossible = 0;
   numQuestions = questions_info.length
@@ -167,4 +170,19 @@ window.get_questions_info().then((info) => {
   // Update the attempted display
   const attemptedDisplay = document.getElementById("attempted");
   attemptedDisplay.textContent = `${totalAttempted}/${numQuestions}`;
+});
+
+
+
+
+
+
+
+
+window.timer_window.receive_update((info) => {
+  totalPointsEarned += info.points;
+
+  // Update the points display
+  const pointsDisplay = document.getElementById("points");
+  pointsDisplay.textContent = `${totalPointsEarned}/${totalPointsPossible}`;
 });

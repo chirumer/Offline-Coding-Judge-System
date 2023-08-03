@@ -519,10 +519,29 @@ ipcMain.handle('sync-credentials', async () => {
 
 
 
+function save_user_progress() {
 
+  const save_obj = { user_progress, registered_email };
 
+  // Save as JSON
+  const jsonFilePath = path.join(active_test_path, 'user_progress.json');
+  fs.writeFileSync(jsonFilePath, JSON.stringify(save_obj, null, 2));
 
+  // Save as encrypted JSON
+  const zip = new AdmZip();
+  zip.addFile('user_progress.json', fs.readFileSync(jsonFilePath));
 
+  const zipData = zip.toBuffer();
+
+  const iv = crypto.randomBytes(16);
+  const key = hashPassphrase(encryption_code);
+
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+  const encryptedZipData = Buffer.concat([iv, cipher.update(zipData), cipher.final()]);
+
+  const encryptedFilePath = path.join(active_test_path, 'encrypted_user_progress.json');
+  fs.writeFileSync(encryptedFilePath, encryptedZipData);
+}
 
 
 
@@ -563,44 +582,60 @@ ipcMain.handle('run-program', (_, submit_time) => {
   const public_test_cases = get_public_tests();
   const programPath = path.join(app.getPath('desktop'), 'CodeArena');
 
+  function showDialogBox(title, message) {
+    // Replace this with actual Electron dialog box code
+    // Example: Using the 'electron' module
+    const { dialog } = require('electron');
+
+    dialog.showMessageBoxSync(current_window, {
+        type: 'info',
+        title: title,
+        message: message
+    });
+  }
+
+  function compiler_error(msg) {
+    showDialogBox("Compilation Error", msg);
+  }
+
+  function all_passed() {
+    const points = questions_info.find(item => item.id === selected_ques_id).points;
+    if (user_progress[selected_ques_id].points_earned < points) {
+      current_window.webContents.send('timer_window_update', { points });
+      user_progress[selected_ques_id].submit_time = submit_time;
+      user_progress[selected_ques_id].points_earned = points;
+      save_user_progress();
+    }
+    showDialogBox("Test cases passed", `All Test Cases Passed! ${points} pts added!`);
+  }
+
+  function not_passed(result) {
+    // Find the first non-matching test case
+    const firstFailedTestCase = result.test_results.find(testCase => !testCase.passed);
+    if (firstFailedTestCase) {
+      const input = firstFailedTestCase.input;
+      const generatedOutput = firstFailedTestCase.actual_output;
+      const expectedOutput = firstFailedTestCase.expected_output;
+
+      showDialogBox(
+          "Test case failed",
+          `Input:\n${input}\n\nGenerated Output:\n${generatedOutput}\n\nExpected Output:\n${expectedOutput}`
+      );
+    }
+  }
+
+  
   if (user_progress[selected_ques_id].selected_language.toLowerCase() == 'c') {
 
-    function showDialogBox(title, message) {
-      // Replace this with actual Electron dialog box code
-      // Example: Using the 'electron' module
-      const { dialog } = require('electron');
-  
-      dialog.showMessageBoxSync(current_window, {
-          type: 'info',
-          title: title,
-          message: message
-      });
-  }
-    
     runCProgramWithTestCases(programPath, public_test_cases, (result) => {
-        if (result.compiler_error) {
-            showDialogBox("Compilation Error", result.message);
-        }
-        if (result.all_passed) {
-          const points = questions_info.find(item => item.id === selected_ques_id).points;
-          user_progress[selected_ques_id].points_earned = points;
-          showDialogBox("Test cases passed", `All Test Cases Passed! ${points} earned!`);
-        } else {
-            // Find the first non-matching test case
-            const firstFailedTestCase = result.test_results.find(testCase => !testCase.passed);
-            if (firstFailedTestCase) {
-                const input = firstFailedTestCase.input;
-                const generatedOutput = firstFailedTestCase.actual_output;
-                const expectedOutput = firstFailedTestCase.expected_output;
-    
-                showDialogBox(
-                    "Test case failed",
-                    `Input:\n${input}\n\nGenerated Output:\n${generatedOutput}\n\nExpected Output:\n${expectedOutput}`
-                );
-            }
-        }
-    
-        console.log('Test Results:', result.test_results);
+      if (result.compiler_error) {
+        compiler_error("Compilation Error", msg);
+      }
+      if (result.all_passed) {
+        all_passed();
+      } else {
+        not_passed();
+      }
     });
   }
 });
@@ -661,12 +696,6 @@ function runCProgramWithTestCases(programPath, testCases, callback) {
                 }
 
                 testResults.push(testCaseResult);
-
-                if (testPassed) {
-                    console.log(`Test case passed - Input: ${testCase.input}`);
-                } else {
-                    console.log(`Test case failed - Input: ${testCase.input}`);
-                }
 
                 if (testResults.length === testCases.length) {
                     const allTestsPassed = testResults.length === totalPassed;

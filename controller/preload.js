@@ -75,5 +75,11 @@ contextBridge.exposeInMainWorld('timer_window', {
     ipcRenderer.on('timer_window_activate', (_, info) => {
       callback(info);
     });
+  },
+
+  receive_update: (callback) => {
+    ipcRenderer.on('timer_window_update', (_, info) => {
+      callback(info);
+    });
   }
 });
