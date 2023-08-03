@@ -8,6 +8,9 @@ const AdmZip = require('adm-zip');
 let current_window, secondary_window;
 let encryption_code, test_folder, active_test_path;
 let registered_email;
+let questions_info, user_progress = {};
+
+let selected_ques_id;
 
 function remove_this_later() {
   current_window = createAuthWindow();
@@ -39,6 +42,18 @@ function hashPassphrase(passphrase) {
   return hash.digest();
 }
 
+function decryptFile(filePath, key) {
+  const encryptedData = fs.readFileSync(filePath);
+
+  const iv = encryptedData.subarray(0, 16);
+  const encryptedContent = encryptedData.subarray(16);
+
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+  const decryptedData = Buffer.concat([decipher.update(encryptedContent), decipher.final()]);
+
+  fs.writeFileSync(filePath, decryptedData);
+}
+
 // Function to delete a directory recursively
 function deleteFolderRecursive(dirPath) {
   if (fs.existsSync(dirPath)) {
@@ -52,6 +67,38 @@ function deleteFolderRecursive(dirPath) {
     });
     fs.rmdirSync(dirPath);
   }
+}
+
+function get_question_infos() {
+  const questionsFolderPath = path.join(active_test_path, 'questions');
+  const subfolders = fs.readdirSync(questionsFolderPath, { withFileTypes: true });
+
+  const questionInfos = [];
+
+  for (const subfolder of subfolders) {
+      if (subfolder.isDirectory()) {
+          const privateFolderPath = path.join(questionsFolderPath, subfolder.name, 'private');
+          const questionInfoPath = path.join(privateFolderPath, 'question_info.json');
+
+          try {
+              decryptFile(questionInfoPath, hashPassphrase(encryption_code));
+
+              const questionInfoData = fs.readFileSync(questionInfoPath, 'utf-8');
+              const questionInfo = JSON.parse(questionInfoData);
+              questionInfo.id = subfolder.name;
+
+              questionInfos.push(questionInfo);
+          } catch (error) {
+              console.error(`Error decrypting or loading question info for subfolder ${subfolder.name}:`, error);
+          }
+      }
+  }
+
+  return questionInfos;
+}
+
+function load_sample_pdf() {
+  
 }
 
 function createAuthWindow() {
@@ -135,6 +182,33 @@ ipcMain.handle('close-window', (which_window) => {
   }
 
   app.quit();
+});
+
+ipcMain.handle('questions-info', () => {
+
+  const infos = questions_info;
+  for (const info of infos) {
+    info.attempted = user_progress.attempted;
+    info.points_earned = user_progress.points_earned;
+  }
+
+  return infos;
+});
+
+ipcMain.handle('select-question', (_, question_id) => {
+  selected_ques_id = question_id;
+  secondary_window.close();
+  if (!user_progress[question_id].attempted) {
+    secondary_window = popupSelection('language_selection');
+  }
+  else {
+
+  }
+});
+
+ipcMain.handle('select-language', (_, language) => {
+  secondary_window.close();
+  load_sample_pdf(selected_ques_id, language);
 });
 
 ipcMain.handle('test-credentials', (_, test_credentials) => {
@@ -239,7 +313,6 @@ ipcMain.handle('start-test', () => {
     fs.mkdirSync(folderPath, { recursive: true });
   }
 
-
   // Unencrypt the file
   const encryptedFilePath = path.join(test_folder, 'encrypted_questions.zip')
   const decryptedFilePath = path.join(folderPath, 'questions.zip');
@@ -270,11 +343,20 @@ ipcMain.handle('start-test', () => {
     // Delete the decrypted zip file
     fs.unlinkSync(decryptedFilePath);
 
-    active_test_path = extractionPath;
+    active_test_path = folderPath;
 
     current_window.setClosable(false);
     current_window.loadFile(path.join(__dirname, 'pages', 'timer', 'index.html'));
-    
+
+    questions_info = get_question_infos();
+    for (const question of questions_info) {
+      user_progress[question.id] = {
+        points_earned: 0,
+        attempted: false,
+        last_submit: 0
+      }
+    }
+
     secondary_window = popupSelection('question_selection');
 
   } catch (err) {

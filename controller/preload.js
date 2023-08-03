@@ -43,3 +43,15 @@ contextBridge.exposeInMainWorld('change_question', () => {
 contextBridge.exposeInMainWorld('run_code', () => {
   ipcRenderer.invoke('run-code');
 });
+
+contextBridge.exposeInMainWorld('get_questions_info', () => {
+  return ipcRenderer.invoke('questions-info');
+});
+
+contextBridge.exposeInMainWorld('select_question', (question_id) => {
+  ipcRenderer.invoke('select-question', question_id);
+});
+
+contextBridge.exposeInMainWorld('select_language', (language) => {
+  ipcRenderer.invoke('select-language', language);
+});
