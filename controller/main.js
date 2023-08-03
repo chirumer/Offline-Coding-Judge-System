@@ -665,6 +665,9 @@ ipcMain.handle('run-program', (_, submit_time) => {
   else if (language == 'java') {
     run_program = run_java_program;
   }
+  else if (language == 'python') {
+    run_program = run_python_program;
+  }
 
   run_program(programPath, public_test_cases, (result) => {
     if (result.compiler_error) {
@@ -709,6 +712,7 @@ function run_c_program(programPath, testCases, callback) {
             const runProcess = spawn(binaryPath);
 
             let programOutput = '';
+            let error
 
             runProcess.stdout.on('data', (data) => {
                 programOutput += data.toString();
@@ -828,15 +832,60 @@ function run_java_program(programPath, testCases, callback) {
     });
 }
 
+function run_python_program(programPath, testCases, callback) {
+  // Execute the Python program and test with each input
+  const pythonFile = 'runner.py';
+  const pythonFilePath = path.join(programPath, pythonFile);
 
+  const testResults = [];
+  let totalPassed = 0;
 
+  for (const testCase of testCases) {
+      const runProcess = spawn('python', [pythonFilePath], { cwd: programPath });
 
+      let programOutput = '';
+      let testPassed = false;
 
+      runProcess.stdout.on('data', (data) => {
+          programOutput += data.toString();
+      });
 
+      runProcess.stderr.on('data', () => {
+          // Handle runtime errors if necessary
+      });
 
+      runProcess.on('close', (code) => {
+          const testCaseResult = {
+              input: testCase.input,
+              expected_output: testCase.output,
+              actual_output: programOutput,
+              passed: false
+          };
 
+          if (code === 0 && programOutput.trim() === testCase.output.trim()) {
+              testCaseResult.passed = true;
+              testPassed = true;
+              totalPassed++;
+          }
 
+          testResults.push(testCaseResult);
 
+          if (testResults.length === testCases.length) {
+              const allTestsPassed = testResults.length === totalPassed;
+              const all_passed = allTestsPassed;
+
+              callback({
+                  compiler_error: false,
+                  all_passed: all_passed,
+                  test_results: testResults
+              });
+          }
+      });
+
+      runProcess.stdin.write(testCase.input);
+      runProcess.stdin.end();
+  }
+}
 
 
 
