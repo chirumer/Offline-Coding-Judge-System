@@ -97,8 +97,36 @@ function get_question_infos() {
   return questionInfos;
 }
 
-function load_sample_pdf() {
-  
+function load_sample_pdf(selected_ques_id) {
+  // Get the desktop path
+  const desktopPath = app.getPath('desktop');
+
+  // Construct paths
+  const codeArenaPath = path.join(desktopPath, 'CodeArena');
+  const initialFolderPath = path.join(active_test_path, 'FolderFiles', 'initial');
+  const questionPublicPath = path.join(active_test_path, 'questions', selected_ques_id, 'public');
+
+  try {
+    // Create 'FolderFiles/initial' directory if it doesn't exist
+    fs.ensureDirSync(initialFolderPath);
+
+    // Move contents from 'CodeArena' to 'FolderFiles/initial'
+    const contents = fs.readdirSync(codeArenaPath);
+    for (const content of contents) {
+      const sourcePath = path.join(codeArenaPath, content);
+      const targetPath = path.join(initialFolderPath, content);
+      fs.moveSync(sourcePath, targetPath, { overwrite: true });
+    }
+
+    // Copy 'sample.pdf' from question's public folder to 'CodeArena'
+    const samplePdfPath = path.join(questionPublicPath, 'sample.pdf');
+    const targetPdfPath = path.join(codeArenaPath, 'sample.pdf');
+    fs.copySync(samplePdfPath, targetPdfPath);
+
+    console.log('Sample PDF loaded successfully.');
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
 }
 
 function createAuthWindow() {
@@ -208,7 +236,7 @@ ipcMain.handle('select-question', (_, question_id) => {
 
 ipcMain.handle('select-language', (_, language) => {
   secondary_window.close();
-  load_sample_pdf(selected_ques_id, language);
+  load_sample_pdf(selected_ques_id);
 });
 
 ipcMain.handle('test-credentials', (_, test_credentials) => {
