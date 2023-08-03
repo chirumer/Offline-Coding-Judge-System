@@ -102,3 +102,32 @@ change_question_btn.addEventListener('click', () => {
   addOverlayWithText('(Selection Window Is Open)');
   window.change_question();
 });
+
+
+let totalPointsPossible;
+let numQuestions;
+window.get_questions_info().then((info) => {
+  const { questions_info } = info;
+
+  // Calculate total points earned and total possible points
+  let totalPointsEarned = 0;
+  let totalAttempted = 0;
+  totalPointsPossible = 0;
+  numQuestions = questions_info.length
+
+  for (const question of questions_info) {
+    totalPointsPossible += question.points;
+    if (question.attempted) {
+      totalPointsEarned += question.points_earned;
+      totalAttempted++;
+    }
+  }
+
+  // Update the points display
+  const pointsDisplay = document.getElementById("points");
+  pointsDisplay.textContent = `${totalPointsEarned}/${totalPointsPossible}`;
+
+  // Update the attempted display
+  const attemptedDisplay = document.getElementById("attempted");
+  attemptedDisplay.textContent = `${totalAttempted}/${numQuestions}`;
+});

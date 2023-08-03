@@ -1,8 +1,6 @@
 window.get_questions_info().then((info) => {
   const scrollableContainer = document.getElementById('scrollable-container');
 
-  console.log(info);
-
   const { questions_info, current_question: current_question_id } = info;
 
   questions_info.forEach((question, index) => {
