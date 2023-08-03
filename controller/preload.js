@@ -64,6 +64,10 @@ contextBridge.exposeInMainWorld('time_over', () => {
   ipcRenderer.invoke('time-over');
 });
 
+contextBridge.exposeInMainWorld('run_program', (submit_time) => {
+  ipcRenderer.invoke('run-program', submit_time);
+});
+
 
 contextBridge.exposeInMainWorld('timer_window', {
 

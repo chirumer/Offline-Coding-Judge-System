@@ -41,12 +41,29 @@ function end_contest() {
   }
 }
 
+function displayLongDialog() {
+  const options = {
+    type: 'info',
+    title: 'Long Dialog Box',
+    message: 'This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.This is a long dialog box with a lot of text. You can put your lengthy message here.',
+    buttons: ['OK'],
+    detail: 'Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.Additional details or information can go here.',
+    noLink: true, // Disable hyperlink parsing
+  };
+
+  dialog.showMessageBox(current_window, options, (response) => {
+    console.log(`User clicked ${options.buttons[response]}`);
+  });
+}
+
 function remove_this_later() {
   current_window = createAuthWindow();
   encryption_code = 'iocode1';
   registered_email = 'test@gmail.com'
   test_folder = path.join(getProgramFilesPath(), 'CodeIO_program_files', 'apps', 'CodeArena', 'tests', 'test1');
   current_window.loadFile(path.join(__dirname, 'pages', 'start_test', 'index.html'));
+
+  // displayLongDialog();
 }
 
 function getProgramFilesPath() {
@@ -242,12 +259,15 @@ ipcMain.handle('close-window', (_, which_window) => {
 ipcMain.handle('questions-info', () => {
 
   const infos = questions_info;
-  for (const info of infos) {
+  let new_infos = []
+  for (const i of infos) {
+    const info = { ...i };
     info.attempted = user_progress[info.id].attempted;
     info.points_earned = user_progress[info.id].points_earned;
+    new_infos.push(info)
   }
 
-  return { questions_info: infos, current_question: selected_ques_id };
+  return { questions_info: new_infos, current_question: selected_ques_id };
 });
 
 ipcMain.handle('change-question', () => {
@@ -490,3 +510,213 @@ ipcMain.handle('sync-credentials', async () => {
     return { success: false, error: error.message };
   }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function get_public_tests() {
+  const input_folder = path.join(active_test_path, 'questions', selected_ques_id, 'public', 'public_input');
+  const output_folder = path.join(active_test_path, 'questions', selected_ques_id, 'public', 'public_output');
+  
+  try {
+    const inputFiles = fs.readdirSync(input_folder);
+    const outputFiles = fs.readdirSync(output_folder);
+    
+    const pairs = inputFiles.map((inputFile) => {
+      const inputFilePath = path.join(input_folder, inputFile);
+      const outputFile = outputFiles.find(outputFile => outputFile === inputFile);
+      const outputFilePath = path.join(output_folder, outputFile);
+      
+      return {
+        input: fs.readFileSync(inputFilePath, 'utf-8'),
+        output: fs.readFileSync(outputFilePath, 'utf-8')
+      };
+    });
+    
+    return pairs;
+  } catch (error) {
+    console.error('Error:', error);
+    return [];  // Return an empty array if there's an error
+  }
+}
+
+
+ipcMain.handle('run-program', (_, submit_time) => {
+
+  const public_test_cases = get_public_tests();
+  const programPath = path.join(app.getPath('desktop'), 'CodeArena');
+
+  if (user_progress[selected_ques_id].selected_language.toLowerCase() == 'c') {
+
+    function showDialogBox(title, message) {
+      // Replace this with actual Electron dialog box code
+      // Example: Using the 'electron' module
+      const { dialog } = require('electron');
+  
+      dialog.showMessageBoxSync(current_window, {
+          type: 'info',
+          title: title,
+          message: message
+      });
+  }
+    
+    runCProgramWithTestCases(programPath, public_test_cases, (result) => {
+        if (result.compiler_error) {
+            showDialogBox("Compilation Error", result.message);
+        }
+        if (result.all_passed) {
+          const points = questions_info.find(item => item.id === selected_ques_id).points;
+          user_progress[selected_ques_id].points_earned = points;
+          showDialogBox("Test cases passed", `All Test Cases Passed! ${points} earned!`);
+        } else {
+            // Find the first non-matching test case
+            const firstFailedTestCase = result.test_results.find(testCase => !testCase.passed);
+            if (firstFailedTestCase) {
+                const input = firstFailedTestCase.input;
+                const generatedOutput = firstFailedTestCase.actual_output;
+                const expectedOutput = firstFailedTestCase.expected_output;
+    
+                showDialogBox(
+                    "Test case failed",
+                    `Input:\n${input}\n\nGenerated Output:\n${generatedOutput}\n\nExpected Output:\n${expectedOutput}`
+                );
+            }
+        }
+    
+        console.log('Test Results:', result.test_results);
+    });
+  }
+});
+
+
+const { exec } = require('child_process');
+const { spawn } = require('child_process');
+
+function runCProgramWithTestCases(programPath, testCases, callback) {
+  
+    // Use mingw32-make to build the C program
+    exec('mingw32-make', { cwd: programPath, shell: true }, (makeError, makeStdout, makeStderr) => {
+        const makeResult = {
+            compiler_error: false,
+            message: '',
+            test_results: []
+        };
+
+        if (makeError) {
+            makeResult.compiler_error = true;
+            makeResult.message = makeStderr;
+            callback(makeResult);
+            return;
+        }
+
+        // Execute the compiled binary and test with each input
+        const binaryPath = path.join(programPath, 'runner.exe');
+        
+        const testResults = [];
+        let totalPassed = 0;
+
+        for (const testCase of testCases) {
+            const runProcess = spawn(binaryPath);
+
+            let programOutput = '';
+            let testPassed = false;
+
+            runProcess.stdout.on('data', (data) => {
+                programOutput += data.toString();
+            });
+
+            runProcess.stderr.on('data', () => {
+                // Handle runtime errors if necessary
+            });
+
+            runProcess.on('close', (code) => {
+                const testCaseResult = {
+                    input: testCase.input,
+                    expected_output: testCase.output,
+                    actual_output: programOutput,
+                    passed: false
+                };
+
+                if (code === 0 && programOutput.trim() === testCase.output.trim()) {
+                    testCaseResult.passed = true;
+                    testPassed = true;
+                    totalPassed++;
+                }
+
+                testResults.push(testCaseResult);
+
+                if (testPassed) {
+                    console.log(`Test case passed - Input: ${testCase.input}`);
+                } else {
+                    console.log(`Test case failed - Input: ${testCase.input}`);
+                }
+
+                if (testResults.length === testCases.length) {
+                    const allTestsPassed = testResults.length === totalPassed;
+                    const all_passed = allTestsPassed;
+
+                    callback({
+                        compiler_error: false,
+                        all_passed: all_passed,
+                        test_results: testResults
+                    });
+                }
+            });
+
+            runProcess.stdin.write(testCase.input);
+            runProcess.stdin.end();
+        }
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -50,6 +50,7 @@ window.timer_window.receive_activate((info) => {
   const btn = document.getElementById('run_code_btn');
 
   const run_handler = (() => {
+    window.run_program();
   });
 
   const load_handler = (() => {
