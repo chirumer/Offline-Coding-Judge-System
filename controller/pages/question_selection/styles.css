@@ -9,6 +9,14 @@ body {
   background-color: #E1F5FE;
 }
 
+#close-button {
+  position: absolute;
+  right: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-app-region: no-drag; 
+}
+
 .titlebar {
   height: 40px;
   background-color: #1976D2;

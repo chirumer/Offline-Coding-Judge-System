@@ -1,7 +1,7 @@
 const { ipcRenderer, contextBridge } = require('electron');
 
-contextBridge.exposeInMainWorld('close_window', () => {
-  ipcRenderer.invoke('close-window');
+contextBridge.exposeInMainWorld('close_window', (which_window) => {
+  ipcRenderer.invoke('close-window', which_window);
 });
 
 contextBridge.exposeInMainWorld('send_test_credentials', (credentials) => {

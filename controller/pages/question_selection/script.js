@@ -54,3 +54,8 @@ window.get_questions_info().then((questions_info) => {
     scrollableContainer.appendChild(card);
   });
 });
+
+const closeButton = document.getElementById('close-button');
+closeButton.addEventListener('click', () => {
+  window.close_window('secondary');
+});

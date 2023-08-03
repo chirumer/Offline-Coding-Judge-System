@@ -11,6 +11,8 @@ let encryption_code, test_folder, active_test_path;
 let registered_email;
 let questions_info, user_progress = {};
 
+let current_window_inactive = false;
+
 let selected_ques_id = null;
 
 function end_contest() {
@@ -208,8 +210,8 @@ function popupSelection(folder) {
 }
 
 app.whenReady().then(() => {
-    current_window = createAuthWindow();
-    // remove_this_later();
+    // current_window = createAuthWindow();
+    remove_this_later();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -224,15 +226,27 @@ app.on('window-all-closed', () => {
     }
 });
 
-ipcMain.handle('close-window', (which_window) => {
+ipcMain.handle('close-window', (_, which_window) => {
 
   if (which_window == 'secondary') {
+
+    if (selected_ques_id == null) {
+      dialog.showMessageBoxSync(secondary_window, { type: 'error', message: 'Not Allowed. You have not loaded your first Question.' });
+      return;
+    }
+
     secondary_window.close();
     secondary_window = null;
+
+    if (current_window_inactive) {
+      current_window_inactive = false;
+      current_window.webContents.send('timer_window_activate', { attempted: user_progress[selected_ques_id].attempted });
+    }
     return;
   }
-
-  app.quit();
+  else {
+    app.quit();
+  }
 });
 
 ipcMain.handle('questions-info', () => {
@@ -247,6 +261,7 @@ ipcMain.handle('questions-info', () => {
 });
 
 ipcMain.handle('change-question', () => {
+  current_window_inactive = true;
   secondary_window = popupSelection('question_selection');
 });
 
@@ -258,6 +273,7 @@ ipcMain.handle('select-question', (_, question_id) => {
     secondary_window = popupSelection('language_selection');
   }
   else {
+    current_window_inactive = false;
 
   }
 });
@@ -265,6 +281,7 @@ ipcMain.handle('select-question', (_, question_id) => {
 ipcMain.handle('select-language', (_, language) => {
   secondary_window.close();
   secondary_window = null;
+  current_window_inactive = false;
   current_window.webContents.send('timer_window_activate', { attempted: false });
   load_sample_pdf(selected_ques_id);
 });
@@ -430,6 +447,7 @@ ipcMain.handle('start-test', () => {
       }
     }
 
+    current_window_inactive = true;
     secondary_window = popupSelection('question_selection');
 
   } catch (err) {
