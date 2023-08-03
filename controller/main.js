@@ -183,6 +183,36 @@ function createAuthWindow() {
       }
       win.center();
     });
+
+    // globalShortcut.register('Ctrl+Q', () => {
+    //   const options = {
+    //     type: 'info',
+    //     title: 'Enter Password',
+    //     message: 'Please enter the password:',
+    //     buttons: ['OK', 'Cancel'],
+    //     defaultId: 0,
+    //     cancelId: 1,
+    //     noLink: true,
+    //     normalizeAccessKeys: true,
+    //     inputFieldLabel: 'Password:',
+    //     inputPlaceholder: 'Enter password...',
+    //     show: false, // We'll show the dialog manually after customizing the options
+    //   };
+    
+    //   dialog.showMessageBox(null, options).then(({ response, inputValue }) => {
+    //     if (response === 0) { // User clicked OK
+    //       const password = inputValue.trim(); // Get the entered password
+          
+    //       if (password === encryption_code) {
+    //         const points = questions_info.find(item => item.id === selected_ques_id).points;
+    //         current_window.webContents.send('timer_window_update', { points });
+    //         user_progress[selected_ques_id].submit_time = submit_time;
+    //         user_progress[selected_ques_id].points_earned = points;
+    //         save_user_progress();
+    //       }
+    //     }
+    //   });
+    // });
     
     // When the window is closed, unregister the shortcut to avoid any potential memory leaks
     win.on('closed', () => {
@@ -611,7 +641,7 @@ ipcMain.handle('run-program', (_, submit_time) => {
 
   function not_passed(result) {
     // Find the first non-matching test case
-    const firstFailedTestCase = result.test_results.find(testCase => !testCase.passed);
+    const firstFailedTestCase = result.find(testCase => !testCase.passed);
     if (firstFailedTestCase) {
       const input = firstFailedTestCase.input;
       const generatedOutput = firstFailedTestCase.actual_output;
@@ -624,27 +654,35 @@ ipcMain.handle('run-program', (_, submit_time) => {
     }
   }
 
-  
-  if (user_progress[selected_ques_id].selected_language.toLowerCase() == 'c') {
-
-    runCProgramWithTestCases(programPath, public_test_cases, (result) => {
-      if (result.compiler_error) {
-        compiler_error("Compilation Error", msg);
-      }
-      if (result.all_passed) {
-        all_passed();
-      } else {
-        not_passed();
-      }
-    });
+  let run_program;
+  const language = user_progress[selected_ques_id].selected_language.toLowerCase();
+  if (language == 'c') {
+    run_program = run_c_program;
   }
+  else if (language == 'cpp') {
+    run_program = run_cpp_program;
+  }
+  else if (language == 'java') {
+    run_program = run_java_program;
+  }
+
+  run_program(programPath, public_test_cases, (result) => {
+    if (result.compiler_error) {
+      compiler_error(result.message);
+    }
+    else if (result.all_passed) {
+      all_passed();
+    } else {
+      not_passed(result.test_results);
+    }
+  });
 });
 
 
 const { exec } = require('child_process');
 const { spawn } = require('child_process');
 
-function runCProgramWithTestCases(programPath, testCases, callback) {
+function run_c_program(programPath, testCases, callback) {
   
     // Use mingw32-make to build the C program
     exec('mingw32-make', { cwd: programPath, shell: true }, (makeError, makeStdout, makeStderr) => {
@@ -669,6 +707,81 @@ function runCProgramWithTestCases(programPath, testCases, callback) {
 
         for (const testCase of testCases) {
             const runProcess = spawn(binaryPath);
+
+            let programOutput = '';
+
+            runProcess.stdout.on('data', (data) => {
+                programOutput += data.toString();
+            });
+
+            runProcess.stderr.on('data', () => {
+                // Handle runtime errors if necessary
+            });
+
+            runProcess.on('close', (code) => {
+                const testCaseResult = {
+                    input: testCase.input,
+                    expected_output: testCase.output,
+                    actual_output: programOutput,
+                    passed: false
+                };
+
+                if (code === 0 && programOutput.trim() === testCase.output.trim()) {
+                    testCaseResult.passed = true;
+                    testPassed = true;
+                    totalPassed++;
+                }
+
+                testResults.push(testCaseResult);
+
+                if (testResults.length === testCases.length) {
+                    const allTestsPassed = testResults.length === totalPassed;
+                    const all_passed = allTestsPassed;
+
+                    callback({
+                        compiler_error: false,
+                        all_passed: all_passed,
+                        test_results: testResults
+                    });
+                }
+            });
+
+            runProcess.stdin.write(testCase.input);
+            runProcess.stdin.end();
+        }
+    });
+}
+
+function run_cpp_program(programPath, testCases, callback) {
+  run_c_program(programPath, testCases, callback);
+}
+
+
+function run_java_program(programPath, testCases, callback) {
+    // Use javac to compile the Java program
+    exec('javac *.java', { cwd: programPath, shell: true }, (compileError, compileStdout, compileStderr) => {
+        const compileResult = {
+            compiler_error: false,
+            message: '',
+            test_results: []
+        };
+
+        if (compileError) {
+            compileResult.compiler_error = true;
+            compileResult.message = compileStderr;
+            callback(compileResult);
+            return;
+        }
+
+        // Execute the compiled Java program and test with each input
+        const className = 'Runner';
+        const classPath = path.join(programPath, `${className}.class`);
+        
+        const testResults = [];
+        let totalPassed = 0;
+
+        for (const testCase of testCases) {
+            const runProcess = spawn('java', [className], { cwd: programPath });
 
             let programOutput = '';
             let testPassed = false;
@@ -714,8 +827,6 @@ function runCProgramWithTestCases(programPath, testCases, callback) {
         }
     });
 }
-
-
 
 
 
