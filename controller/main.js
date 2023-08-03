@@ -13,7 +13,7 @@ let questions_info, user_progress = {};
 
 let current_window_inactive = false;
 
-let selected_ques_id = null;
+let selected_ques_id = null, previous_selected_ques_id = null;
 
 function end_contest() {
   // Show a confirmation dialog before ending the contest
@@ -111,45 +111,37 @@ function get_question_infos() {
   return questionInfos;
 }
 
-function load_sample_pdf(selected_ques_id) {
+function load_question(what_to_load, old_ques_id, new_ques_id) {
 
-  // Get the desktop path
-  const desktopPath = app.getPath('desktop');
+  const codeArenaPath = path.join(app.getPath('desktop'), 'CodeArena');
 
-  // Construct paths
-  const codeArenaPath = path.join(desktopPath, 'CodeArena');
-  const move_location = selected_ques_id == null ? 'initial' : selected_ques_id;
-  const initialFolderPath = path.join(active_test_path, 'FolderFiles', move_location);
-  const questionPublicPath = path.join(active_test_path, 'questions', selected_ques_id, 'public');
+  if (old_ques_id == null || user_progress[old_ques_id].attempted) {
 
-  try {
+    const save_path = path.join(active_test_path, 'FolderFiles', old_ques_id == null ? 'initial' : old_ques_id);
+    fs.copySync(codeArenaPath, save_path);
+  }
+  fs.emptydirSync(codeArenaPath)
 
-    if (selected_ques_id != null && !user_progress[selected_ques_id].attempted) {
-      // not attempted, nothing to save
-      fs.emptyDirSync(codeArenaPath);
-      console.log('nothing to save, deleted contents of CodeArena');
+  const publicFilesPath = path.join(active_test_path, 'questions', new_ques_id, 'public')
+  if (what_to_load == 'sample') {
+    console.log('loading sample')
+    fs.copySync(path.join(publicFilesPath, 'sample.pdf'), path.join(codeArenaPath, 'sample.pdf'))
+  }
+  else if (what_to_load == 'code') {
+    if (user_progress[new_ques_id].attempted) {
+      console.log('loading from saved')
+      const save_path = path.join(active_test_path, 'FolderFiles', new_ques_id);
+      fs.copySync(save_path, codeArenaPath)
     }
     else {
-      // Create 'FolderFiles/initial' directory if it doesn't exist
-      fs.ensureDirSync(initialFolderPath);
+      console.log('loading fresh')
+      fs.copySync(path.join(publicFilesPath, 'sample.pdf'), path.join(codeArenaPath, 'sample.pdf'))
+      fs.copySync(path.join(publicFilesPath, 'question.pdf'), path.join(codeArenaPath, 'question.pdf'))
+      fs.copySync(path.join(publicFilesPath, 'code_templates', user_progress[new_ques_id].selected_language), path.join(codeArenaPath))
+      user_progress[new_ques_id].attempted = true;
 
-      // Move contents from 'CodeArena' to 'FolderFiles/initial'
-      const contents = fs.readdirSync(codeArenaPath);
-      for (const content of contents) {
-        const sourcePath = path.join(codeArenaPath, content);
-        const targetPath = path.join(initialFolderPath, content);
-        fs.moveSync(sourcePath, targetPath, { overwrite: true });
-      }
-      console.log(`saved CodeArena folder content to ${targetPath}`);
+      console.log(user_progress[new_ques_id])
     }
-
-    // Copy 'sample.pdf' from question's public folder to 'CodeArena'
-    const samplePdfPath = path.join(questionPublicPath, 'sample.pdf');
-    const targetPdfPath = path.join(codeArenaPath, 'sample.pdf');
-    fs.copySync(samplePdfPath, targetPdfPath);
-
-  } catch (error) {
-    console.error('An error occurred:', error);
   }
 }
 
@@ -234,7 +226,6 @@ ipcMain.handle('close-window', (_, which_window) => {
       dialog.showMessageBoxSync(secondary_window, { type: 'error', message: 'Not Allowed. You have not loaded your first Question.' });
       return;
     }
-
     secondary_window.close();
     secondary_window = null;
 
@@ -267,6 +258,8 @@ ipcMain.handle('change-question', () => {
 });
 
 ipcMain.handle('select-question', (_, question_id) => {
+
+  previous_selected_ques_id = selected_ques_id;
   selected_ques_id = question_id;
   secondary_window.close();
   secondary_window = null;
@@ -275,7 +268,8 @@ ipcMain.handle('select-question', (_, question_id) => {
   }
   else {
     current_window_inactive = false;
-
+    current_window.webContents.send('timer_window_activate', { attempted: user_progress[selected_ques_id].attempted });
+    load_question('code', previous_selected_ques_id, selected_ques_id);
   }
 });
 
@@ -284,11 +278,19 @@ ipcMain.handle('select-language', (_, language) => {
   secondary_window = null;
   current_window_inactive = false;
   current_window.webContents.send('timer_window_activate', { attempted: false });
-  load_sample_pdf(selected_ques_id);
+  user_progress[selected_ques_id].selected_language = language;
+
+  // load_sample_pdf(selected_ques_id, language);
+  load_question('sample', previous_selected_ques_id, selected_ques_id);
 });
 
 ipcMain.handle('end-test-early', () => {
   end_contest();
+});
+
+ipcMain.handle('load-template', () => {
+  // load_code_template(selected_ques_id, user_progress['selected_language']);
+  load_question('code', previous_selected_ques_id, selected_ques_id);
 });
 
 ipcMain.handle('test-credentials', (_, test_credentials) => {

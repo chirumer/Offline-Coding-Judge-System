@@ -45,12 +45,46 @@ function removeOverlay() {
 // initially, user needs to select a question
 addOverlayWithText('(Selection Window Is Open)');
 
+let state;
 window.timer_window.receive_activate((info) => {
+  const btn = document.getElementById('run_code_btn');
+
+  const run_handler = (() => {
+  });
+
+  const load_handler = (() => {
+    window.load_template();
+    make_run_btn(btn);
+
+    // Update the attempted display
+    totalAttempted += 1;
+    const attemptedDisplay = document.getElementById("attempted");
+    attemptedDisplay.textContent = `${totalAttempted}/${numQuestions}`;
+  });
+
+  btn.addEventListener('click', () => {
+    if (state == 'run') {
+      run_handler();
+    }
+    else {
+      load_handler();
+    }
+  });
+
+  function make_run_btn(btn) {
+    btn.innerText = 'Run Code';
+    state = 'run';
+  }
+  function make_load_btn(btn) {
+    btn.innerText = 'Load';
+    state = 'load';
+  }
+
   if (!info.attempted) {
-    document.getElementById('run_code_btn').innerText = 'Load'
+    make_load_btn(btn);
   }
   else {
-    document.getElementById('run_code_btn').innerText = 'Run Code'
+    make_run_btn(btn);
   }
   removeOverlay();
 });
@@ -106,12 +140,14 @@ change_question_btn.addEventListener('click', () => {
 
 let totalPointsPossible;
 let numQuestions;
+let totalAttempted = 0;
+
 window.get_questions_info().then((info) => {
   const { questions_info } = info;
 
   // Calculate total points earned and total possible points
   let totalPointsEarned = 0;
-  let totalAttempted = 0;
+  totalAttempted = 0;
   totalPointsPossible = 0;
   numQuestions = questions_info.length
 

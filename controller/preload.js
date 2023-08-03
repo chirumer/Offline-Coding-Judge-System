@@ -56,6 +56,10 @@ contextBridge.exposeInMainWorld('select_language', (language) => {
   ipcRenderer.invoke('select-language', language);
 });
 
+contextBridge.exposeInMainWorld('load_template', () => {
+  ipcRenderer.invoke('load-template');
+});
+
 contextBridge.exposeInMainWorld('time_over', () => {
   ipcRenderer.invoke('time-over');
 });

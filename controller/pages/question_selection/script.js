@@ -55,10 +55,6 @@ window.get_questions_info().then((info) => {
         window.select_question(question.id);
       });
       card.appendChild(loadButton);
-
-      loadButton.addEventListener('click', () => {
-        window.select_question(question.id);
-      });
     }
 
     scrollableContainer.appendChild(card);
