@@ -139,8 +139,6 @@ function load_question(what_to_load, old_ques_id, new_ques_id) {
       fs.copySync(path.join(publicFilesPath, 'question.pdf'), path.join(codeArenaPath, 'question.pdf'))
       fs.copySync(path.join(publicFilesPath, 'code_templates', user_progress[new_ques_id].selected_language), path.join(codeArenaPath))
       user_progress[new_ques_id].attempted = true;
-
-      console.log(user_progress[new_ques_id])
     }
   }
 }
