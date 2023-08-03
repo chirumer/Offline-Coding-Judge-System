@@ -238,6 +238,7 @@ ipcMain.handle('close-window', (_, which_window) => {
     secondary_window.close();
     secondary_window = null;
 
+
     if (current_window_inactive) {
       current_window_inactive = false;
       current_window.webContents.send('timer_window_activate', { attempted: user_progress[selected_ques_id].attempted });
@@ -257,7 +258,7 @@ ipcMain.handle('questions-info', () => {
     info.points_earned = user_progress[info.id].points_earned;
   }
 
-  return infos;
+  return { questions_info: infos, current_question: selected_ques_id };
 });
 
 ipcMain.handle('change-question', () => {

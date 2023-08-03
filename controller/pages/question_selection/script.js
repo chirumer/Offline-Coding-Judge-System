@@ -1,7 +1,9 @@
-window.get_questions_info().then((questions_info) => {
+window.get_questions_info().then((info) => {
   const scrollableContainer = document.getElementById('scrollable-container');
 
-  console.log(questions_info);
+  console.log(info);
+
+  const { questions_info, current_question: current_question_id } = info;
 
   questions_info.forEach((question, index) => {
     const card = document.createElement('div');
@@ -42,14 +44,24 @@ window.get_questions_info().then((questions_info) => {
 
     card.appendChild(cardInfo);
 
-    const loadButton = document.createElement('button');
-    loadButton.classList.add('card-button', 'button-19');
-    loadButton.textContent = 'Load';
-    card.appendChild(loadButton);
+    if (question.id === current_question_id) {
+      const selectedText = document.createElement('div');
+      selectedText.classList.add('currently-selected');
+      selectedText.textContent = '(currently selected)';
+      card.appendChild(selectedText);
+    } else {
+      const loadButton = document.createElement('button');
+      loadButton.classList.add('card-button', 'button-19');
+      loadButton.textContent = 'Load';
+      loadButton.addEventListener('click', () => {
+        window.select_question(question.id);
+      });
+      card.appendChild(loadButton);
 
-    loadButton.addEventListener('click', () => {
-      window.select_question(question.id);
-    });
+      loadButton.addEventListener('click', () => {
+        window.select_question(question.id);
+      });
+    }
 
     scrollableContainer.appendChild(card);
   });

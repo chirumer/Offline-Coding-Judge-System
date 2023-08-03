@@ -124,3 +124,11 @@ body {
 .scrollable-container::-webkit-scrollbar-thumb:active {
   background-color: #1976D2; /* Even darker shade for active state */
 }
+
+.currently-selected {
+  font-size: 16px;
+  font-weight: 800;
+  color: #4CAF50; /* Adjust this color to your preference */
+  margin-top: auto;
+  align-self: flex-end;
+}
