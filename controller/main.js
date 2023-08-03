@@ -4,20 +4,23 @@ const fs = require('fs-extra');
 const path = require('path');
 const crypto = require('crypto');
 const AdmZip = require('adm-zip');
+const { renameSync } = require('fs');
 
 let current_window, secondary_window;
 let encryption_code, test_folder, active_test_path;
 let registered_email;
 let questions_info, user_progress = {};
 
-let selected_ques_id;
+let selected_ques_id = null;
 
-function end_quiz() {
+function end_contest() {
   if (secondary_window) {
     secondary_window.close();
+    secondary_window = null;
   }
   current_window.setClosable(true);
   current_window.close();
+  current_window = null;
   console.log('quiz ended');
 }
 
@@ -63,21 +66,6 @@ function decryptFile(filePath, key) {
   fs.writeFileSync(filePath, decryptedData);
 }
 
-// Function to delete a directory recursively
-function deleteFolderRecursive(dirPath) {
-  if (fs.existsSync(dirPath)) {
-    fs.readdirSync(dirPath).forEach((file) => {
-      const currentPath = path.join(dirPath, file);
-      if (fs.lstatSync(currentPath).isDirectory()) {
-        deleteFolderRecursive(currentPath);
-      } else {
-        fs.unlinkSync(currentPath);
-      }
-    });
-    fs.rmdirSync(dirPath);
-  }
-}
-
 function get_question_infos() {
   const questionsFolderPath = path.join(active_test_path, 'questions');
   const subfolders = fs.readdirSync(questionsFolderPath, { withFileTypes: true });
@@ -107,24 +95,35 @@ function get_question_infos() {
 }
 
 function load_sample_pdf(selected_ques_id) {
+
   // Get the desktop path
   const desktopPath = app.getPath('desktop');
 
   // Construct paths
   const codeArenaPath = path.join(desktopPath, 'CodeArena');
-  const initialFolderPath = path.join(active_test_path, 'FolderFiles', 'initial');
+  const move_location = selected_ques_id == null ? 'initial' : selected_ques_id;
+  const initialFolderPath = path.join(active_test_path, 'FolderFiles', move_location);
   const questionPublicPath = path.join(active_test_path, 'questions', selected_ques_id, 'public');
 
   try {
-    // Create 'FolderFiles/initial' directory if it doesn't exist
-    fs.ensureDirSync(initialFolderPath);
 
-    // Move contents from 'CodeArena' to 'FolderFiles/initial'
-    const contents = fs.readdirSync(codeArenaPath);
-    for (const content of contents) {
-      const sourcePath = path.join(codeArenaPath, content);
-      const targetPath = path.join(initialFolderPath, content);
-      fs.moveSync(sourcePath, targetPath, { overwrite: true });
+    if (selected_ques_id != null && !user_progress[selected_ques_id].attempted) {
+      // not attempted, nothing to save
+      fs.emptyDirSync(codeArenaPath);
+      console.log('nothing to save, deleted contents of CodeArena');
+    }
+    else {
+      // Create 'FolderFiles/initial' directory if it doesn't exist
+      fs.ensureDirSync(initialFolderPath);
+
+      // Move contents from 'CodeArena' to 'FolderFiles/initial'
+      const contents = fs.readdirSync(codeArenaPath);
+      for (const content of contents) {
+        const sourcePath = path.join(codeArenaPath, content);
+        const targetPath = path.join(initialFolderPath, content);
+        fs.moveSync(sourcePath, targetPath, { overwrite: true });
+      }
+      console.log(`saved CodeArena folder content to ${targetPath}`);
     }
 
     // Copy 'sample.pdf' from question's public folder to 'CodeArena'
@@ -214,6 +213,7 @@ ipcMain.handle('close-window', (which_window) => {
 
   if (which_window == 'secondary') {
     secondary_window.close();
+    secondary_window = null;
     return;
   }
 
@@ -224,16 +224,21 @@ ipcMain.handle('questions-info', () => {
 
   const infos = questions_info;
   for (const info of infos) {
-    info.attempted = user_progress.attempted;
-    info.points_earned = user_progress.points_earned;
+    info.attempted = user_progress[info.id].attempted;
+    info.points_earned = user_progress[info.id].points_earned;
   }
 
   return infos;
 });
 
+ipcMain.handle('change-question', () => {
+  secondary_window = popupSelection('question_selection');
+});
+
 ipcMain.handle('select-question', (_, question_id) => {
   selected_ques_id = question_id;
   secondary_window.close();
+  secondary_window = null;
   if (!user_progress[question_id].attempted) {
     secondary_window = popupSelection('language_selection');
   }
@@ -244,8 +249,13 @@ ipcMain.handle('select-question', (_, question_id) => {
 
 ipcMain.handle('select-language', (_, language) => {
   secondary_window.close();
-  current_window.webContents.send('timer_window_activate');
+  secondary_window = null;
+  current_window.webContents.send('timer_window_activate', { attempted: false });
   load_sample_pdf(selected_ques_id);
+});
+
+ipcMain.handle('end-test-early', () => {
+  end_contest();
 });
 
 ipcMain.handle('test-credentials', (_, test_credentials) => {
@@ -300,7 +310,7 @@ ipcMain.handle('back-to-test-selection', () => {
 });
 
 ipcMain.handle('time-over', () => {
-  end_quiz();
+  end_contest();
 });
 
 ipcMain.handle('verify-credentials', (_, credentials) => {
@@ -340,14 +350,20 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
   current_window.loadFile(path.join(__dirname, 'pages', 'start_test', 'index.html'))
 });
 
+function generateUniqueFolderName(basePath) {
+  const timestamp = new Date().getTime();
+  return path.join(basePath, `backup_${timestamp}`);
+}
+
 ipcMain.handle('start-test', () => {
   const appDataPath = app.getPath('userData');
   const folderName = 'controller_data/active_test';
   const folderPath = path.join(appDataPath, folderName);
 
   if (fs.existsSync(folderPath)) {
-    // Delete the folder and create a new one
-    deleteFolderRecursive(folderPath);
+    // rename the folder and create a new one
+    fs.ensureDirSync(path.join(appDataPath, 'controller_data/archive'));
+    renameSync(folderPath, generateUniqueFolderName(path.join(appDataPath, 'controller_data/archive')));
     fs.mkdirSync(folderPath);
   } else {
     // Create a new folder

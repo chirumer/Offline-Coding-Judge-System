@@ -37,7 +37,7 @@ window.get_questions_info().then((questions_info) => {
 
     const cardPoints = document.createElement('div');
     cardPoints.classList.add('card-points');
-    cardPoints.textContent = `Points Earned: ${question.points_earned || 'N/A'}`;
+    cardPoints.textContent = `Points Earned: ${question.points_earned}/${question.points}`;
     cardInfo.appendChild(cardPoints);
 
     card.appendChild(cardInfo);

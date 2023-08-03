@@ -43,9 +43,17 @@ function removeOverlay() {
 
 
 // initially, user needs to select a question
-addOverlayWithText('(Selection Window Is Open)')
+addOverlayWithText('(Selection Window Is Open)');
 
-window.timer_window.receive_activate(removeOverlay);
+window.timer_window.receive_activate((info) => {
+  if (!info.attempted) {
+    document.getElementById('run_code_btn').innerText = 'Load'
+  }
+  else {
+    document.getElementById('run_code_btn').innerText = 'Run Code'
+  }
+  removeOverlay();
+});
 
 
 
@@ -86,4 +94,11 @@ function startTimer(initialSeconds) {
 }
 
 // Call the startTimer function with the desired initial time in seconds
-startTimer(10); 
+startTimer(60 * 60);
+
+
+const change_question_btn = document.getElementById('change_question_btn');
+change_question_btn.addEventListener('click', () => {
+  addOverlayWithText('(Selection Window Is Open)');
+  window.change_question();
+});

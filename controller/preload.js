@@ -64,8 +64,8 @@ contextBridge.exposeInMainWorld('time_over', () => {
 contextBridge.exposeInMainWorld('timer_window', {
 
   receive_activate: (callback) => {
-    ipcRenderer.on('timer_window_activate', () => {
-      callback();
+    ipcRenderer.on('timer_window_activate', (_, info) => {
+      callback(info);
     });
   }
 });
