@@ -55,3 +55,17 @@ contextBridge.exposeInMainWorld('select_question', (question_id) => {
 contextBridge.exposeInMainWorld('select_language', (language) => {
   ipcRenderer.invoke('select-language', language);
 });
+
+contextBridge.exposeInMainWorld('time_over', () => {
+  ipcRenderer.invoke('time-over');
+});
+
+
+contextBridge.exposeInMainWorld('timer_window', {
+
+  receive_activate: (callback) => {
+    ipcRenderer.on('timer_window_activate', () => {
+      callback();
+    });
+  }
+});

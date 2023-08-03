@@ -44,3 +44,46 @@ function removeOverlay() {
 
 // initially, user needs to select a question
 addOverlayWithText('(Selection Window Is Open)')
+
+window.timer_window.receive_activate(removeOverlay);
+
+
+
+
+
+
+
+
+const timerElement = document.getElementById("timer");
+
+// Function to start the countdown timer
+function startTimer(initialSeconds) {
+  let seconds = initialSeconds;
+
+  // Function to update the timer display
+  function updateTimer() {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    // Format the time as MM:SS
+    const formattedTime = `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+
+    // Update the timer display
+    timerElement.textContent = `Time Left: ${formattedTime}`;
+
+    // Check if time has run out
+    if (seconds === 0) {
+      clearInterval(timerInterval);
+      window.time_over();
+    } else {
+      seconds--;
+    }
+  }
+
+  // Update the timer immediately and then every second
+  updateTimer();
+  const timerInterval = setInterval(updateTimer, 1000);
+}
+
+// Call the startTimer function with the desired initial time in seconds
+startTimer(10); 

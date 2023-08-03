@@ -12,6 +12,15 @@ let questions_info, user_progress = {};
 
 let selected_ques_id;
 
+function end_quiz() {
+  if (secondary_window) {
+    secondary_window.close();
+  }
+  current_window.setClosable(true);
+  current_window.close();
+  console.log('quiz ended');
+}
+
 function remove_this_later() {
   current_window = createAuthWindow();
   encryption_code = 'iocode1';
@@ -123,7 +132,6 @@ function load_sample_pdf(selected_ques_id) {
     const targetPdfPath = path.join(codeArenaPath, 'sample.pdf');
     fs.copySync(samplePdfPath, targetPdfPath);
 
-    console.log('Sample PDF loaded successfully.');
   } catch (error) {
     console.error('An error occurred:', error);
   }
@@ -236,6 +244,7 @@ ipcMain.handle('select-question', (_, question_id) => {
 
 ipcMain.handle('select-language', (_, language) => {
   secondary_window.close();
+  current_window.webContents.send('timer_window_activate');
   load_sample_pdf(selected_ques_id);
 });
 
@@ -288,6 +297,10 @@ ipcMain.handle('back-to-login', () => {
 
 ipcMain.handle('back-to-test-selection', () => {
   current_window.loadFile(path.join(__dirname, 'pages', 'test_selection', 'index.html'))
+});
+
+ipcMain.handle('time-over', () => {
+  end_quiz();
 });
 
 ipcMain.handle('verify-credentials', (_, credentials) => {
