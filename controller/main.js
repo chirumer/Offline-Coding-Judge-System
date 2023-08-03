@@ -14,14 +14,29 @@ let questions_info, user_progress = {};
 let selected_ques_id = null;
 
 function end_contest() {
-  if (secondary_window) {
-    secondary_window.close();
-    secondary_window = null;
+  // Show a confirmation dialog before ending the contest
+  const options = {
+    type: 'question',
+    buttons: ['Yes', 'No'],
+    defaultId: 1,
+    title: 'Confirmation',
+    message: 'Are you sure you want to end the contest?'
+  };
+
+  const response = dialog.showMessageBoxSync(current_window, options);
+
+  if (response === 0) { // User clicked 'Yes'
+    if (secondary_window) {
+      secondary_window.close();
+      secondary_window = null;
+    }
+    current_window.setClosable(true);
+    current_window.close();
+    current_window = null;
+    console.log('Quiz ended');
+  } else {
+    console.log('Contest not ended');
   }
-  current_window.setClosable(true);
-  current_window.close();
-  current_window = null;
-  console.log('quiz ended');
 }
 
 function remove_this_later() {
@@ -42,7 +57,7 @@ function getProgramFilesPath() {
 }
 
 function generateHMAC(data, secret) {
-  const hmac = createHmac('sha256', secret);
+  const hmac = crypto.createHmac('sha256', secret);
   hmac.update(data);
   return hmac.digest('hex');
 }
@@ -193,8 +208,8 @@ function popupSelection(folder) {
 }
 
 app.whenReady().then(() => {
-    // current_window = createAuthWindow();
-    remove_this_later();
+    current_window = createAuthWindow();
+    // remove_this_later();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -263,7 +278,7 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
   encryption_code = test_credentials.encryption_code;
 
   if (!test_name) {
-    dialog.showMessageBox({ type: 'error', message: 'Test Does Not Exist.' });
+    dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Test Does Not Exist.' });
     return;
   }
 
@@ -271,7 +286,7 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
   fs.access(FolderPath, fs.constants.F_OK, (err) => {
     
     if (err) {
-      dialog.showMessageBox({ type: 'error', message: 'Test Does Not Exist.' });
+      dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Test Does Not Exist.' });
       return;
 
     } else {
@@ -279,7 +294,7 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
         const keyHashFilePath = path.join(FolderPath, 'key_hash.txt');
         const data = fs.readFileSync(keyHashFilePath, 'utf8');
     
-        const providedHash = createHash('sha256').update(encryption_code).digest('hex');
+        const providedHash = crypto.createHash('sha256').update(encryption_code).digest('hex');
     
         if (providedHash === data.trim()) {
 
@@ -287,10 +302,11 @@ ipcMain.handle('test-credentials', (_, test_credentials) => {
           current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
 
         } else {
-          dialog.showMessageBox({ type: 'error', message: 'Invalid encryption code.' });
+          dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Invalid encryption code.' });
         }
       } catch (readErr) {
-        dialog.showMessageBox({ type: 'error', message: 'Error reading key_hash.txt.' });
+        console.log(readErr);
+        dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Error reading key_hash.txt.' });
         return;
       }
     }
@@ -321,12 +337,12 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
   const filePath = path.join(folderPath, fileName);
 
   if (credentials.accessCode == 'masterkey') {
-    dialog.showMessageBox({ type: 'info', message: 'Master Key Used' });
+    dialog.showMessageBoxSync(current_window, { type: 'info', message: 'Master Key Used' });
   }
   else {
 
     if (!fs.existsSync(filePath)) {
-      dialog.showMessageBox({ type: 'error', message: 'Credentials Not Synced' });
+      dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Credentials Not Synced' });
       current_window.loadFile(path.join(__dirname, 'pages', 'landing', 'index.html'));
       return;
     }
@@ -336,11 +352,11 @@ ipcMain.handle('verify-credentials', (_, credentials) => {
 
     const reg_key = generateHMAC(credentials.email, encryption_code);
     if (!(reg_key in registered_credentials)) {
-      dialog.showMessageBox({ type: 'error', message: 'This Email Is Not Registered.' });
+      dialog.showMessageBoxSync(current_window, { type: 'error', message: 'This Email Is Not Registered.' });
       return;
     }
     if (generateHMAC(credentials.accessCode, encryption_code) != registered_credentials[reg_key]) {
-      dialog.showMessageBox({ type: 'error', message: 'Wrong Access Code.' });
+      dialog.showMessageBoxSync(current_window, { type: 'error', message: 'Wrong Access Code.' });
       return;
     }
 
@@ -442,7 +458,7 @@ ipcMain.handle('sync-credentials', async () => {
     fs.writeFileSync(filePath, JSON.stringify(credentialsData, null, 2));
 
     const successMessage = 'Credentials sync successful!';
-    dialog.showMessageBox({ type: 'info', message: successMessage });
+    dialog.showMessageBoxSync(current_window, { type: 'info', message: successMessage });
 
     return { success: true };
 
@@ -450,7 +466,7 @@ ipcMain.handle('sync-credentials', async () => {
     console.error('Error fetching or saving credentials:', error.message);
 
     const errorMessage = `Failed to sync credentials: ${error.message}`;
-    dialog.showMessageBox({ type: 'error', message: errorMessage });
+    dialog.showMessageBoxSync(current_window, { type: 'error', message: errorMessage });
 
     return { success: false, error: error.message };
   }
