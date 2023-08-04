@@ -247,8 +247,8 @@ function popupSelection(folder) {
 }
 
 app.whenReady().then(() => {
-    // current_window = createAuthWindow();
-    remove_this_later();
+    current_window = createAuthWindow();
+    // remove_this_later();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -669,7 +669,7 @@ ipcMain.handle('run-program', (_, submit_time) => {
   if (language == 'c') {
     run_program = run_c_program;
   }
-  else if (language == 'cpp') {
+  else if (language == 'c++') {
     run_program = run_cpp_program;
   }
   else if (language == 'java') {
